@@ -23,7 +23,7 @@ const pool = new Pool({
 //Ruta GET
 app.get("/posts", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM posts");
+    const result = await pool.query("SELECT * FROM posts ORDER BY id DESC");
     res.json(result.rows);
   } catch (err) {
     console.error("Error en GET /posts", err);
@@ -31,20 +31,55 @@ app.get("/posts", async (req, res) => {
   }
 });
 
+
 //Ruta POST
-app.post("/posts", async (req, res) => {
-  const { titulo, img, descripcion } = req.body;
+app.get("/posts", async (req, res) => {
   try {
-    await pool.query(
-      "INSERT INTO posts (titulo, img, descripcion, likes) VALUES ($1, $2, $3, 0)",
-      [titulo, img, descripcion]
-    );
-    res.status(201).send("Post creado");
+    const result = await pool.query("SELECT * FROM posts ORDER BY id DESC");
+    res.json(result.rows);
   } catch (err) {
-    console.error("Error en POST /posts", err);
-    res.status(500).send("Error al crear post");
+    console.error("Error en GET /posts", err);
+    res.status(500).send("Error al obtener posts");
   }
 });
+
+
+// Ruta PUT para dar like
+app.put("/posts/like/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "UPDATE posts SET likes = likes + 1 WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).send("Post no encontrado");
+    }
+    res.send("Like registrado");
+  } catch (err) {
+    console.error("Error en PUT /posts/like/:id", err);
+    res.status(500).send("Error al registrar like");
+  }
+});
+
+// Ruta DELETE para eliminar post
+app.delete("/posts/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM posts WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).send("Post no encontrado");
+    }
+    res.send("Post eliminado");
+  } catch (err) {
+    console.error("Error en DELETE /posts/:id", err);
+    res.status(500).send("Error al eliminar post");
+  }
+});
+
 
 //Inicio servidor
 app.listen(port, () => {
